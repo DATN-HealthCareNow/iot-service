@@ -1,0 +1,66 @@
+server:
+  port: ${IOT_SERVICE_PORT:8082}
+
+spring:
+  application:
+    name: iot-service
+
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:default} 
+  data:
+    mongodb:
+      # Default: iot_db container defined in docker-compose
+      uri: mongodb://${MONGO_HOST:iot_db}:${MONGO_IOT_PORT:27017}/${MONGO_IOT_DB:healthcare_iot}
+      auto-index-creation: true
+
+    redis:
+      host: ${REDIS_HOST:redis}
+      port: ${REDIS_PORT:6379}
+      timeout: 2000ms
+
+  # RabbitMQ Configuration
+  rabbitmq:
+    host: ${RABBITMQ_HOST:rabbitmq}
+    port: ${RABBITMQ_PORT:5672}
+    username: ${RABBITMQ_USER:guest}
+    password: ${RABBITMQ_PASSWORD:guest}
+
+# Monitoring config
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, prometheus
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+---
+# Development Profile (local machine, no docker network)
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:${MONGO_IOT_PORT:27018}/${MONGO_IOT_DB:healthcare_iot}
+    redis:
+      host: localhost
+
+  rabbitmq:
+    host: localhost
+
+---
+# Cloud Profile
+spring:
+  config:
+    activate:
+      on-profile: cloud
+
+  data:
+    mongodb:
+      uri: ${CLOUD_MONGO_URI}
