@@ -27,6 +27,7 @@ public class DailyStep {
   private Instant date; // Note: Ensure UTC Timezone handling
 
   private int steps;
-
+  private double caloriesFromSteps;
   private String source;
+  private Instant createdAt;
 }
