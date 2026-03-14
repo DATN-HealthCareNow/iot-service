@@ -1,20 +1,14 @@
-FROM eclipse-temurin:21-jdk-alpine
-
+# Stage 1: Build với Maven
+FROM maven:3.9.6-eclipse-temurin-21-alpine AS build
 WORKDIR /app
-
-# Copy maven wrapper and pom.xml
-COPY .mvn/ .mvn
-COPY mvnw pom.xml ./
-
-# Download dependencies (to cache them)
-RUN ./mvnw dependency:go-offline
-
-# Copy source code
+COPY pom.xml .
 COPY src ./src
+# Build skip test để nhanh hơn
+RUN mvn clean package -DskipTests
 
-# Build the application
-RUN ./mvnw clean package -DskipTests
-
-# Run the application
-# We use the jar that was just built. The version matches pom.xml
-CMD ["java", "-jar", "target/iot-service-0.0.1-SNAPSHOT.jar"]
+# Stage 2: Chạy với JRE nhẹ
+FROM eclipse-temurin:21-jre-alpine
+WORKDIR /app
+COPY --from=build /app/target/*.jar app.jar
+EXPOSE 8082
+ENTRYPOINT ["java", "-jar", "app.jar"]
