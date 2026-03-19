@@ -10,6 +10,7 @@ import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.mongodb.core.index.CompoundIndex;
 import org.springframework.data.mongodb.core.mapping.Document;
 
+import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 
 @Data
@@ -21,6 +22,7 @@ import java.time.LocalDateTime;
 public class DailyHealth {
     @Id
     private String id;
+    @NotBlank(message = "userId must not be blank")
     private String userId;
     
     // Ngày định dạng YYYY-MM-DD
