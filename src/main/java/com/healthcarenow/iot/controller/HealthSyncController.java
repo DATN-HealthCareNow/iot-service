@@ -31,4 +31,13 @@ public class HealthSyncController {
         // Sử dụng luôn userId từ Header
         return ResponseEntity.ok(healthDataService.seedHealthData(userId, days));
     }
+
+    @GetMapping("/daily")
+    public ResponseEntity<DailyHealth> getDailyHealth(
+            @RequestHeader(value = "x-user-id", required = true) String userId,
+            @RequestParam(required = false, defaultValue = "") String date) {
+        
+        // Gọi service lấy data thật, nếu không có sẽ tự động xả hàng Random giả
+        return ResponseEntity.ok(healthDataService.getDailyHealth(userId, date));
+    }
 }

@@ -88,4 +88,38 @@ public class HealthDataService {
 
         return "✅ Đã tạo/update thành công " + (daysToSeed + 1) + " ngày dữ liệu mẫu cho User " + userId;
     }
+
+    // 3. GET DỮ LIỆU NGÀY HIỆN TẠI (KÈM CHỨC NĂNG API LẬU FAKE DATA NẾU CHƯA CÓ)
+    public DailyHealth getDailyHealth(String userId, String dateString) {
+        if (dateString == null || dateString.isBlank()) {
+            dateString = ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        }
+        
+        final String finalDate = dateString;
+        return repository.findByUserIdAndDateString(userId, finalDate)
+                .orElseGet(() -> {
+                    // Khởi tạo data giả (API lậu) theo yêu cầu cho tới khi có Native Module (HealthKit thật)
+                    Random random = new Random();
+                    DailyHealth.Metrics metrics = DailyHealth.Metrics.builder()
+                            .steps((double) (2500 + random.nextInt(6000))) // Random 2500 -> 8500 bước
+                            .exerciseMinutes(20 + random.nextInt(40))      // Random 20 -> 60 phút
+                            .activeCalories(150 + random.nextInt(350))     // Random 150 -> 500 kcal
+                            .restingCalories(1400)
+                            .sleepMinutes(360 + random.nextInt(180))       // 6 tiếng -> 9 tiếng
+                            .waterConsumedMl(1000 + random.nextInt(1500))  // 1 -> 2.5 lít
+                            .build();
+
+                    DailyHealth fakeData = DailyHealth.builder()
+                            .userId(userId)
+                            .dateString(finalDate)
+                            .rawDate(ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"))
+                                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z")))
+                            .source("Mock_API_HealthKit_Fake")
+                            .metrics(metrics)
+                            .build();
+                    
+                    // Lưu lại DB để lần gọi GET tiếp theo trong ngày sẽ lấy data đã bị Mock chứ không random nhảy số lại liên tục
+                    return repository.save(fakeData);
+                });
+    }
 }
