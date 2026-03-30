@@ -9,6 +9,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Random;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -39,6 +40,7 @@ public class HealthDataService {
                         eMetrics.setRestingCalories(pMetrics.getRestingCalories() != null ? pMetrics.getRestingCalories() : eMetrics.getRestingCalories());
                         eMetrics.setSleepMinutes(pMetrics.getSleepMinutes() != null ? pMetrics.getSleepMinutes() : eMetrics.getSleepMinutes());
                         eMetrics.setWaterConsumedMl(pMetrics.getWaterConsumedMl() != null ? pMetrics.getWaterConsumedMl() : eMetrics.getWaterConsumedMl());
+                        eMetrics.setHeartRate(pMetrics.getHeartRate() != null ? pMetrics.getHeartRate() : eMetrics.getHeartRate());
                     }
                     return repository.save(existing);
                 })
@@ -65,6 +67,7 @@ public class HealthDataService {
             int mockCalories = (int) (mockExercise * 7.5);  
             int mockSleep = 300 + random.nextInt(181);      
             int mockWater = 500 + random.nextInt(2001);     
+            int mockHeartRate = 60 + random.nextInt(41);    
 
             DailyHealth.Metrics metrics = DailyHealth.Metrics.builder()
                     .steps(mockSteps)
@@ -73,6 +76,7 @@ public class HealthDataService {
                     .restingCalories(1500)
                     .sleepMinutes(mockSleep)
                     .waterConsumedMl(mockWater)
+                    .heartRate(mockHeartRate)
                     .build();
 
             DailyHealth record = DailyHealth.builder()
@@ -107,6 +111,7 @@ public class HealthDataService {
                             .restingCalories(1400)
                             .sleepMinutes(360 + random.nextInt(180))       // 6 tiếng -> 9 tiếng
                             .waterConsumedMl(1000 + random.nextInt(1500))  // 1 -> 2.5 lít
+                            .heartRate(60 + random.nextInt(41))            // 60 -> 100 bpm
                             .build();
 
                     DailyHealth fakeData = DailyHealth.builder()
@@ -121,5 +126,12 @@ public class HealthDataService {
                     // Lưu lại DB để lần gọi GET tiếp theo trong ngày sẽ lấy data đã bị Mock chứ không random nhảy số lại liên tục
                     return repository.save(fakeData);
                 });
+    }
+
+    // 4. GET DỮ LIỆU LOG RANGE (TỪ START DATE ĐẾN END DATE)
+    public List<DailyHealth> getHealthReport(String userId, String startDate, String endDate) {
+        // Implement logic fetching between dates. Note: dateString is stored as "YYYY-MM-DD".
+        // Using string comparison is fine since "YYYY-MM-DD" is lexically sortable.
+        return repository.findByUserIdAndDateStringBetweenOrderByDateStringAsc(userId, startDate, endDate);
     }
 }

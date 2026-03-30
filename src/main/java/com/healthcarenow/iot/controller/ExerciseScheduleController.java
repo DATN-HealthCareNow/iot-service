@@ -34,4 +34,15 @@ public class ExerciseScheduleController {
       @RequestBody ExerciseSchedule.RecurrenceConfig config) {
     return ResponseEntity.ok(scheduleService.updateRecurrence(id, config));
   }
+
+  @PutMapping("/{id}/toggle")
+  public ResponseEntity<ExerciseSchedule> toggleSchedule(@PathVariable String id) {
+    return ResponseEntity.ok(scheduleService.toggleSchedule(id));
+  }
+
+  @DeleteMapping("/{id}")
+  public ResponseEntity<Void> deleteSchedule(@PathVariable String id) {
+    scheduleService.deleteSchedule(id);
+    return ResponseEntity.noContent().build();
+  }
 }

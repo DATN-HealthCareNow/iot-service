@@ -6,7 +6,9 @@ import com.healthcarenow.iot.dto.ActivityFinishRequest;
 import com.healthcarenow.iot.dto.ActivityStartRequest;
 import com.healthcarenow.iot.dto.HeartRateUpdateRequest;
 import com.healthcarenow.iot.entity.Activity;
+import com.healthcarenow.iot.entity.DailyHealth;
 import com.healthcarenow.iot.repository.ActivityRepository;
+import com.healthcarenow.iot.repository.DailyHealthRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -15,6 +17,9 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 
 @Service
@@ -23,6 +28,7 @@ import java.util.ArrayList;
 public class ActivityService {
 
   private final ActivityRepository activityRepository;
+  private final DailyHealthRepository dailyHealthRepository;
   private final EventPublisher eventPublisher;
 
   public Activity start(ActivityStartRequest request) {
@@ -104,18 +110,46 @@ public class ActivityService {
       activity.setIndoorContext(in);
     }
 
-    activity = activityRepository.save(activity);
+    final Activity savedActivity = activityRepository.save(activity);
+
+    // Increment metrics in DailyHealth
+    String dateStr = ZonedDateTime.ofInstant(savedActivity.getStartAt(), ZoneId.of("Asia/Ho_Chi_Minh"))
+        .format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        
+    dailyHealthRepository.findByUserIdAndDateString(savedActivity.getUserId(), dateStr)
+        .ifPresentOrElse(dh -> {
+            DailyHealth.Metrics mx = dh.getMetrics();
+            if (mx == null) {
+                mx = new DailyHealth.Metrics();
+                dh.setMetrics(mx);
+            }
+            int addedMins = (int) (durationSecs / 60);
+            mx.setExerciseMinutes((mx.getExerciseMinutes() != null ? mx.getExerciseMinutes() : 0) + addedMins);
+            mx.setActiveCalories((mx.getActiveCalories() != null ? mx.getActiveCalories() : 0) + (int) calories);
+            dailyHealthRepository.save(dh);
+        }, () -> {
+            DailyHealth dh = DailyHealth.builder()
+                .userId(savedActivity.getUserId())
+                .dateString(dateStr)
+                .source("DanhK_Activity")
+                .metrics(DailyHealth.Metrics.builder()
+                    .exerciseMinutes((int) (durationSecs / 60))
+                    .activeCalories((int) calories)
+                    .build())
+                .build();
+            dailyHealthRepository.save(dh);
+        });
 
     // Publish Event async
     ActivityCompletedEvent event = ActivityCompletedEvent.builder()
-        .activityId(activity.getId())
-        .userId(activity.getUserId())
+        .activityId(savedActivity.getId())
+        .userId(savedActivity.getUserId())
         .activeCalories((int) calories)
         .totalDurationStr(durationSecs)
         .build();
     eventPublisher.publishActivityCompleted(event);
 
-    return activity;
+    return savedActivity;
   }
 
   private double calculateCalories(Activity activity, long durationSecs, ActivityFinishRequest request) {
@@ -128,7 +162,16 @@ public class ActivityService {
         // rule of thumb: 1 km = 60-70 cals approx
         yield distKm * 65.0;
       }
+      case CYCLING -> {
+        double distKm = request.getDistanceMeter() != null ? request.getDistanceMeter() / 1000.0 : 0;
+        yield distKm * 25.0; // Approx 25 cal/km
+      }
+      case WALKING -> {
+        double distKm = request.getDistanceMeter() != null ? request.getDistanceMeter() / 1000.0 : 0;
+        yield distKm * 50.0;
+      }
       case YOGA -> durationMins * 3.0; // Approx 3 cal/min
+      case STRETCHING -> durationMins * 2.5; // Approx 2.5 cal/min
       case GYM -> durationMins * 5.0; // Approx 5 cal/min
       case HIKE -> durationMins * 6.0; // Approx 6 cal/min
     };
