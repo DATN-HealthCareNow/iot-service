@@ -34,7 +34,7 @@ public class Activity {
   private List<HeartRateSample> heartRateSamples;
 
   public enum Type {
-    RUN, YOGA, GYM, HIKE
+    RUN, CYCLING, WALKING, STRETCHING, YOGA, GYM, HIKE
   }
 
   public enum Mode {

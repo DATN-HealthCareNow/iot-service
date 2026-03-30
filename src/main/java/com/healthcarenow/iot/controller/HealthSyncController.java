@@ -6,6 +6,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/tracking")
 @RequiredArgsConstructor
@@ -39,5 +41,13 @@ public class HealthSyncController {
         
         // Gọi service lấy data thật, nếu không có sẽ tự động xả hàng Random giả
         return ResponseEntity.ok(healthDataService.getDailyHealth(userId, date));
+    }
+
+    @GetMapping("/report")
+    public ResponseEntity<List<DailyHealth>> getHealthReport(
+            @RequestHeader(value = "x-user-id", required = true) String userId,
+            @RequestParam String startDate,
+            @RequestParam String endDate) {
+        return ResponseEntity.ok(healthDataService.getHealthReport(userId, startDate, endDate));
     }
 }

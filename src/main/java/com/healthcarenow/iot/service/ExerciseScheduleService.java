@@ -35,8 +35,8 @@ public class ExerciseScheduleService {
 
   public List<ExerciseSchedule> getUpcomingSchedules() {
     String userId = UserContextHolder.getUserId();
-    // Return schedules that start after Now
-    return scheduleRepository.findByUserIdAndStartDateAfterOrderByStartDateAsc(userId, Instant.now());
+    // Return all schedules for the user. Frontend handles today/recurring logic.
+    return scheduleRepository.findByUserId(userId);
   }
 
   public ExerciseSchedule updateRecurrence(String id, ExerciseSchedule.RecurrenceConfig config) {
@@ -54,5 +54,32 @@ public class ExerciseScheduleService {
     }
 
     return scheduleRepository.save(schedule);
+  }
+
+  public ExerciseSchedule toggleSchedule(String id) {
+    String userId = UserContextHolder.getUserId();
+    ExerciseSchedule schedule = scheduleRepository.findById(id)
+        .orElseThrow(() -> new IllegalArgumentException("Schedule not found"));
+    
+    // Check if it belongs to the user
+    if (!userId.equals(schedule.getUserId())) {
+      throw new IllegalArgumentException("Schedule not found or unauthorized");
+    }
+
+    schedule.setReminderEnabled(!schedule.isReminderEnabled());
+    return scheduleRepository.save(schedule);
+  }
+
+  public void deleteSchedule(String id) {
+    String userId = UserContextHolder.getUserId();
+    ExerciseSchedule schedule = scheduleRepository.findById(id)
+        .orElseThrow(() -> new IllegalArgumentException("Schedule not found"));
+        
+    // Check if it belongs to the user
+    if (!userId.equals(schedule.getUserId())) {
+      throw new IllegalArgumentException("Schedule not found or unauthorized");
+    }
+
+    scheduleRepository.deleteById(id);
   }
 }
