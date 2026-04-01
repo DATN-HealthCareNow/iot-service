@@ -50,9 +50,6 @@ public class HealthSyncRequest {
         @JsonAlias({"sleepMinutes", "sleep_minutes"})
         private Integer sleepMinutes;
 
-        @JsonAlias({"waterConsumedMl", "water_consumed_ml"})
-        private Integer waterConsumedMl;
-
         @JsonAlias({"heartRate", "heart_rate"})
         private Integer heartRate;
     }

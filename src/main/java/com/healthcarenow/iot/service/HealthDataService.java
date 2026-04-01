@@ -64,10 +64,13 @@ public class HealthDataService {
                         eMetrics.setActiveCalories(pMetrics.getActiveCalories() != null ? pMetrics.getActiveCalories() : eMetrics.getActiveCalories());
                         eMetrics.setRestingCalories(pMetrics.getRestingCalories() != null ? pMetrics.getRestingCalories() : eMetrics.getRestingCalories());
                         eMetrics.setSleepMinutes(pMetrics.getSleepMinutes() != null ? pMetrics.getSleepMinutes() : eMetrics.getSleepMinutes());
-                        eMetrics.setWaterConsumedMl(pMetrics.getWaterConsumedMl() != null ? pMetrics.getWaterConsumedMl() : eMetrics.getWaterConsumedMl());
                         eMetrics.setHeartRate(pMetrics.getHeartRate() != null ? pMetrics.getHeartRate() : eMetrics.getHeartRate());
                         
-                        log.info("[SYNC] Merged metrics: steps={}, activeCalories={}", eMetrics.getSteps(), eMetrics.getActiveCalories());
+                        log.info("[SYNC] Merged metrics: steps={}, googleExerciseMinutes={}, activeCalories={}, heartRate={}", 
+                                eMetrics.getSteps(), 
+                                eMetrics.getGoogleExerciseMinutes(),
+                                eMetrics.getActiveCalories(),
+                                eMetrics.getHeartRate());
                     }
                     
                     DailyHealth saved = repository.save(existing);
