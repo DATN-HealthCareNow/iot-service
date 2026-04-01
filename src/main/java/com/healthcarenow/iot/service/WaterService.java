@@ -1,6 +1,7 @@
 package com.healthcarenow.iot.service;
 
 import com.healthcarenow.iot.config.RabbitMQConfig;
+import com.healthcarenow.iot.dto.EventEnvelope;
 import com.healthcarenow.iot.dto.WaterLogRequest;
 import com.healthcarenow.iot.dto.WaterLoggedEvent;
 import com.healthcarenow.iot.entity.DailyHealth;
@@ -18,6 +19,7 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 
 @Service
 @Slf4j
@@ -42,14 +44,47 @@ public class WaterService {
                 .build();
         waterLogRepository.save(logEntry);
 
+        // Update Daily Health Metrics
+        DailyHealth dailyHealth = dailyHealthRepository.findByUserIdAndDateString(userId, today)
+                .orElseGet(() -> {
+                    DailyHealth.Metrics metrics = new DailyHealth.Metrics();
+                    return DailyHealth.builder()
+                            .userId(userId)
+                            .dateString(today)
+                            .rawDate(ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"))
+                                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z")))
+                            .source("WaterLog")
+                            .metrics(metrics)
+                            .build();
+                });
+        
+        if (dailyHealth.getMetrics() == null) {
+            dailyHealth.setMetrics(new DailyHealth.Metrics());
+        }
+        
+        int currentWater = dailyHealth.getMetrics().getWaterConsumedMl() != null ? dailyHealth.getMetrics().getWaterConsumedMl() : 0;
+        dailyHealth.getMetrics().setWaterConsumedMl(currentWater + request.getAmountMl());
+        dailyHealthRepository.save(dailyHealth);
+
         // Publish event to core-service
         WaterLoggedEvent event = WaterLoggedEvent.builder()
                 .userId(userId)
                 .amountMl(request.getAmountMl())
                 .dateString(today)
                 .build();
-        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, RabbitMQConfig.WATER_LOGGING_ROUTING_KEY, event);
-        log.info("Published WaterLoggedEvent for user {} with amount {}", userId, request.getAmountMl());
+
+        String eventId = UUID.randomUUID().toString();
+        EventEnvelope<WaterLoggedEvent> envelope = EventEnvelope.<WaterLoggedEvent>builder()
+                .eventId(eventId)
+                .eventType("water.logged")
+                .eventVersion(1)
+                .timestamp(ZonedDateTime.now(ZoneId.of("UTC")).format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
+                .correlationId(eventId)
+                .payload(event)
+                .build();
+
+        rabbitTemplate.convertAndSend(RabbitMQConfig.EXCHANGE_NAME, RabbitMQConfig.WATER_LOGGING_ROUTING_KEY, envelope);
+        log.info("Published water event envelope id={} for user {} with amount {}", eventId, userId, request.getAmountMl());
     }
 
     public List<WaterLog> getTodaysLogs(String userId) {

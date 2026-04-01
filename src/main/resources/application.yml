@@ -38,8 +38,7 @@ management:
       show-details: always
   metrics:
     tags:
-      jackson:
-    property-naming-strategy: SNAKE_CASE
+      application: ${spring.application.name}
   application: ${spring.application.name}
 
 ---

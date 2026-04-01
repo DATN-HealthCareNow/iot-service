@@ -27,6 +27,9 @@ public class DailyHealth {
     
     // Ngày định dạng YYYY-MM-DD
     private String dateString;
+
+    // Ngày local (Asia/Ho_Chi_Minh) để thống nhất truy vấn theo ngày
+    private String dateStringLocal;
     
     // Timestamp gốc chuyển từ Mobile lên
     private String rawDate;
@@ -49,6 +52,7 @@ public class DailyHealth {
     public static class Metrics {
         @Builder.Default private Double steps = 0.0;
         @Builder.Default private Integer exerciseMinutes = 0;
+        @Builder.Default private Integer googleExerciseMinutes = 0;
         @Builder.Default private Integer activeCalories = 0;
         @Builder.Default private Integer restingCalories = 1400;
         @Builder.Default private Integer sleepMinutes = 0;

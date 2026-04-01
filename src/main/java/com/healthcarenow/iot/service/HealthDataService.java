@@ -3,26 +3,49 @@ package com.healthcarenow.iot.service;
 import com.healthcarenow.iot.entity.DailyHealth;
 import com.healthcarenow.iot.repository.DailyHealthRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
+import java.time.format.DateTimeParseException;
 import java.time.format.DateTimeFormatter;
 import java.util.Random;
 import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class HealthDataService {
 
     private final DailyHealthRepository repository;
 
     // 1. UPDATE/UPSERT TỪ MOBILE
     public DailyHealth upsertHealthData(DailyHealth payload) {
+        log.info("[SYNC] Received health sync request | userId={}, date={}, source={}", 
+                payload.getUserId(), payload.getDateString(), payload.getSource());
+        log.debug("[SYNC] Payload metrics: {}", payload.getMetrics());
+        
+        if (payload.getMetrics() == null) {
+            log.warn("[SYNC] ⚠️ Metrics is NULL! This will cause empty data in DB");
+        } else {
+            log.info("[SYNC] Metrics details: steps={}, activeCalories={}, exerciseMinutes={}, sleepMinutes={}, waterConsumedMl={}", 
+                    payload.getMetrics().getSteps(),
+                    payload.getMetrics().getActiveCalories(),
+                    payload.getMetrics().getExerciseMinutes(),
+                    payload.getMetrics().getSleepMinutes(),
+                    payload.getMetrics().getWaterConsumedMl());
+        }
+        
         return repository.findByUserIdAndDateString(payload.getUserId(), payload.getDateString())
                 .map(existing -> {
+                    log.info("[SYNC] Found existing record, merging data");
                     // Update đè dữ liệu
                     existing.setRawDate(payload.getRawDate());
+                    existing.setDateStringLocal(payload.getDateStringLocal() != null ? payload.getDateStringLocal() : existing.getDateStringLocal());
                     existing.setSource(payload.getSource() != null ? payload.getSource() : "DanhK");
                     
                     if (payload.getMetrics() != null) {
@@ -32,23 +55,37 @@ public class HealthDataService {
                         if (eMetrics == null) {
                             eMetrics = new DailyHealth.Metrics();
                             existing.setMetrics(eMetrics);
+                            log.info("[SYNC] Created new metrics object");
                         }
                         
                         eMetrics.setSteps(pMetrics.getSteps() != null ? pMetrics.getSteps() : eMetrics.getSteps());
                         eMetrics.setExerciseMinutes(pMetrics.getExerciseMinutes() != null ? pMetrics.getExerciseMinutes() : eMetrics.getExerciseMinutes());
+                        eMetrics.setGoogleExerciseMinutes(pMetrics.getGoogleExerciseMinutes() != null ? pMetrics.getGoogleExerciseMinutes() : eMetrics.getGoogleExerciseMinutes());
                         eMetrics.setActiveCalories(pMetrics.getActiveCalories() != null ? pMetrics.getActiveCalories() : eMetrics.getActiveCalories());
                         eMetrics.setRestingCalories(pMetrics.getRestingCalories() != null ? pMetrics.getRestingCalories() : eMetrics.getRestingCalories());
                         eMetrics.setSleepMinutes(pMetrics.getSleepMinutes() != null ? pMetrics.getSleepMinutes() : eMetrics.getSleepMinutes());
                         eMetrics.setWaterConsumedMl(pMetrics.getWaterConsumedMl() != null ? pMetrics.getWaterConsumedMl() : eMetrics.getWaterConsumedMl());
                         eMetrics.setHeartRate(pMetrics.getHeartRate() != null ? pMetrics.getHeartRate() : eMetrics.getHeartRate());
+                        
+                        log.info("[SYNC] Merged metrics: steps={}, activeCalories={}", eMetrics.getSteps(), eMetrics.getActiveCalories());
                     }
-                    return repository.save(existing);
+                    
+                    DailyHealth saved = repository.save(existing);
+                    log.info("[SYNC] ✅ Successfully merged and saved");
+                    return saved;
                 })
                 .orElseGet(() -> {
+                    log.info("[SYNC] No existing record, creating new one");
                     if (payload.getMetrics() == null) {
+                        log.warn("[SYNC] ⚠️ Creating record with NULL metrics!");
                         payload.setMetrics(new DailyHealth.Metrics());
                     }
-                    return repository.save(payload);
+                    if (payload.getDateStringLocal() == null || payload.getDateStringLocal().isBlank()) {
+                        payload.setDateStringLocal(payload.getDateString());
+                    }
+                    DailyHealth saved = repository.save(payload);
+                    log.info("[SYNC] ✅ Successfully created new record with id={}", saved.getId());
+                    return saved;
                 }); // Tạo mới nếu không tồn tại
     }
 
@@ -117,6 +154,7 @@ public class HealthDataService {
                     DailyHealth fakeData = DailyHealth.builder()
                             .userId(userId)
                             .dateString(finalDate)
+                            .dateStringLocal(finalDate)
                             .rawDate(ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"))
                                     .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z")))
                             .source("Mock_API_HealthKit_Fake")
@@ -130,8 +168,57 @@ public class HealthDataService {
 
     // 4. GET DỮ LIỆU LOG RANGE (TỪ START DATE ĐẾN END DATE)
     public List<DailyHealth> getHealthReport(String userId, String startDate, String endDate) {
-        // Implement logic fetching between dates. Note: dateString is stored as "YYYY-MM-DD".
-        // Using string comparison is fine since "YYYY-MM-DD" is lexically sortable.
-        return repository.findByUserIdAndDateStringBetweenOrderByDateStringAsc(userId, startDate, endDate);
+        String normalizedStart = normalizeDate(startDate);
+        String normalizedEnd = normalizeDate(endDate);
+
+        if (normalizedStart.compareTo(normalizedEnd) > 0) {
+            String tmp = normalizedStart;
+            normalizedStart = normalizedEnd;
+            normalizedEnd = tmp;
+        }
+
+        try {
+            return repository.findByUserIdAndDateStringGreaterThanEqualAndDateStringLessThanEqualOrderByDateStringAsc(
+                    userId,
+                    normalizedStart,
+                    normalizedEnd
+            );
+        } catch (Exception ex) {
+            log.error("[REPORT] Failed to fetch report | userId={}, startDate={}, endDate={}, normalizedStart={}, normalizedEnd={}",
+                    userId, startDate, endDate, normalizedStart, normalizedEnd, ex);
+            return List.of();
+        }
+    }
+
+    private String normalizeDate(String rawDate) {
+        if (rawDate == null || rawDate.isBlank()) {
+            return ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        }
+
+        String value = rawDate.trim();
+        if (value.length() >= 10 && value.charAt(4) == '-' && value.charAt(7) == '-') {
+            return value.substring(0, 10);
+        }
+
+        try {
+            return LocalDate.parse(value).format(DateTimeFormatter.ISO_LOCAL_DATE);
+        } catch (DateTimeParseException ignored) {
+            // Try with timezone-aware formats below.
+        }
+
+        try {
+            return OffsetDateTime.parse(value).toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE);
+        } catch (DateTimeParseException ignored) {
+            // Try with Instant below.
+        }
+
+        try {
+            return Instant.parse(value)
+                    .atZone(ZoneId.of("Asia/Ho_Chi_Minh"))
+                    .toLocalDate()
+                    .format(DateTimeFormatter.ISO_LOCAL_DATE);
+        } catch (DateTimeParseException ex) {
+            throw new IllegalArgumentException("Invalid date format. Expected yyyy-MM-dd or ISO timestamp: " + rawDate, ex);
+        }
     }
 }
