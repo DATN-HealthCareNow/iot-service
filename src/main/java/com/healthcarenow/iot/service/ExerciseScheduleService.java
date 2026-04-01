@@ -9,6 +9,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.temporal.TemporalAdjusters;
 import java.util.List;
 
 @Service
@@ -17,6 +21,7 @@ import java.util.List;
 public class ExerciseScheduleService {
 
   private final ExerciseScheduleRepository scheduleRepository;
+  private static final ZoneId VN_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
   public ExerciseSchedule createSchedule(ScheduleCreateRequest request) {
     String userId = UserContextHolder.getUserId();
@@ -81,5 +86,20 @@ public class ExerciseScheduleService {
     }
 
     scheduleRepository.deleteById(id);
+  }
+
+  public long cleanupPreviousWeekSchedules() {
+    LocalDate today = LocalDate.now(VN_ZONE);
+    LocalDate currentWeekStart = today.with(TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+    LocalDate previousWeekStart = currentWeekStart.minusWeeks(1);
+
+    Instant fromInclusive = previousWeekStart.atStartOfDay(VN_ZONE).toInstant();
+    Instant toExclusive = currentWeekStart.atStartOfDay(VN_ZONE).toInstant();
+
+    long deleted = scheduleRepository.deleteByStartDateGreaterThanEqualAndStartDateLessThan(fromInclusive, toExclusive);
+    log.info("[SCHEDULE_CLEANUP] Deleted {} exercise schedules from previous week. Range: {} -> {}",
+        deleted, fromInclusive, toExclusive);
+
+    return deleted;
   }
 }

@@ -11,4 +11,5 @@ import java.util.List;
 public interface ExerciseScheduleRepository extends MongoRepository<ExerciseSchedule, String> {
   List<ExerciseSchedule> findByUserIdAndStartDateAfterOrderByStartDateAsc(String userId, Instant date);
   List<ExerciseSchedule> findByUserId(String userId);
+  long deleteByStartDateGreaterThanEqualAndStartDateLessThan(Instant fromInclusive, Instant toExclusive);
 }
