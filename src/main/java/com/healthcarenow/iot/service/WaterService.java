@@ -61,9 +61,6 @@ public class WaterService {
         if (dailyHealth.getMetrics() == null) {
             dailyHealth.setMetrics(new DailyHealth.Metrics());
         }
-        
-        int currentWater = dailyHealth.getMetrics().getWaterConsumedMl() != null ? dailyHealth.getMetrics().getWaterConsumedMl() : 0;
-        dailyHealth.getMetrics().setWaterConsumedMl(currentWater + request.getAmountMl());
         dailyHealthRepository.save(dailyHealth);
 
         // Publish event to core-service

@@ -32,12 +32,11 @@ public class HealthDataService {
         if (payload.getMetrics() == null) {
             log.warn("[SYNC] ⚠️ Metrics is NULL! This will cause empty data in DB");
         } else {
-            log.info("[SYNC] Metrics details: steps={}, activeCalories={}, exerciseMinutes={}, sleepMinutes={}, waterConsumedMl={}", 
+            log.info("[SYNC] Metrics details: steps={}, activeCalories={}, exerciseMinutes={}, sleepMinutes={}", 
                     payload.getMetrics().getSteps(),
                     payload.getMetrics().getActiveCalories(),
                     payload.getMetrics().getExerciseMinutes(),
-                    payload.getMetrics().getSleepMinutes(),
-                    payload.getMetrics().getWaterConsumedMl());
+                    payload.getMetrics().getSleepMinutes());
         }
         
         return repository.findByUserIdAndDateString(payload.getUserId(), payload.getDateString())
@@ -115,7 +114,6 @@ public class HealthDataService {
                     .activeCalories(mockCalories)
                     .restingCalories(1500)
                     .sleepMinutes(mockSleep)
-                    .waterConsumedMl(mockWater)
                     .heartRate(mockHeartRate)
                     .build();
 
@@ -150,7 +148,6 @@ public class HealthDataService {
                             .activeCalories(150 + random.nextInt(350))     // Random 150 -> 500 kcal
                             .restingCalories(1400)
                             .sleepMinutes(360 + random.nextInt(180))       // 6 tiếng -> 9 tiếng
-                            .waterConsumedMl(1000 + random.nextInt(1500))  // 1 -> 2.5 lít
                             .heartRate(60 + random.nextInt(41))            // 60 -> 100 bpm
                             .build();
 
