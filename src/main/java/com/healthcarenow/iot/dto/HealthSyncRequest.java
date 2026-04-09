@@ -52,5 +52,8 @@ public class HealthSyncRequest {
 
         @JsonAlias({"heartRate", "heart_rate"})
         private Integer heartRate;
+
+        @JsonAlias({"restingHeartRate", "resting_heart_rate"})
+        private Integer restingHeartRate;
     }
 }

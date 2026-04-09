@@ -44,8 +44,10 @@ public class InternalWaterMetricsController {
         if (last7Days != null && !last7Days.isEmpty()) {
             int totalExerciseMins = 0;
             for (DailyHealth dh : last7Days) {
-                if (dh.getMetrics() != null && dh.getMetrics().getExerciseMinutes() != null) {
-                    totalExerciseMins += dh.getMetrics().getExerciseMinutes();
+                if (dh.getMetrics() != null) {
+                    int currentMins = dh.getMetrics().getExerciseMinutes() != null ? dh.getMetrics().getExerciseMinutes() : 0;
+                    int googleMins = dh.getMetrics().getGoogleExerciseMinutes() != null ? dh.getMetrics().getGoogleExerciseMinutes() : 0;
+                    totalExerciseMins += (currentMins + googleMins);
                 }
             }
             avgExercise = (double) totalExerciseMins / last7Days.size();
@@ -73,8 +75,12 @@ public class InternalWaterMetricsController {
             : date;
 
         int exerciseMinutes = dailyHealthRepository.findByUserIdAndDateString(userId, resolvedDate)
-            .map(dailyHealth -> dailyHealth.getMetrics() == null ? null : dailyHealth.getMetrics().getExerciseMinutes())
-            .filter(value -> value != null)
+            .map(dh -> {
+                if (dh.getMetrics() == null) return 0;
+                int currentMins = dh.getMetrics().getExerciseMinutes() != null ? dh.getMetrics().getExerciseMinutes() : 0;
+                int googleMins = dh.getMetrics().getGoogleExerciseMinutes() != null ? dh.getMetrics().getGoogleExerciseMinutes() : 0;
+                return currentMins + googleMins;
+            })
             .orElse(0);
 
         return ResponseEntity.ok(ExerciseMetricsResponse.builder()

@@ -162,14 +162,6 @@ public class ActivityService {
         // rule of thumb: 1 km = 60-70 cals approx
         yield distKm * 65.0;
       }
-      case CYCLING -> {
-        double distKm = request.getDistanceMeter() != null ? request.getDistanceMeter() / 1000.0 : 0;
-        yield distKm * 25.0; // Approx 25 cal/km
-      }
-      case WALKING -> {
-        double distKm = request.getDistanceMeter() != null ? request.getDistanceMeter() / 1000.0 : 0;
-        yield distKm * 50.0;
-      }
       case YOGA -> durationMins * 3.0; // Approx 3 cal/min
       case STRETCHING -> durationMins * 2.5; // Approx 2.5 cal/min
       case GYM -> durationMins * 5.0; // Approx 5 cal/min
