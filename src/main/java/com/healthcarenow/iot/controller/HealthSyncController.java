@@ -73,6 +73,7 @@ public class HealthSyncController {
                     .restingCalories(request.getMetrics().getRestingCalories() != null ? request.getMetrics().getRestingCalories() : 1400)
                     .sleepMinutes(request.getMetrics().getSleepMinutes() != null ? request.getMetrics().getSleepMinutes() : 0)
                     .heartRate(request.getMetrics().getHeartRate() != null ? request.getMetrics().getHeartRate() : 0)
+                    .restingHeartRate(request.getMetrics().getRestingHeartRate() != null ? request.getMetrics().getRestingHeartRate() : 0)
                     .build();
             payload.setMetrics(metrics);
         } else {

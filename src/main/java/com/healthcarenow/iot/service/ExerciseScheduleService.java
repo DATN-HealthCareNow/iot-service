@@ -89,17 +89,10 @@ public class ExerciseScheduleService {
   }
 
   public long cleanupPreviousWeekSchedules() {
-    LocalDate today = LocalDate.now(VN_ZONE);
-    LocalDate currentWeekStart = today.with(TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
-    LocalDate previousWeekStart = currentWeekStart.minusWeeks(1);
-
-    Instant fromInclusive = previousWeekStart.atStartOfDay(VN_ZONE).toInstant();
-    Instant toExclusive = currentWeekStart.atStartOfDay(VN_ZONE).toInstant();
-
-    long deleted = scheduleRepository.deleteByStartDateGreaterThanEqualAndStartDateLessThan(fromInclusive, toExclusive);
-    log.info("[SCHEDULE_CLEANUP] Deleted {} exercise schedules from previous week. Range: {} -> {}",
-        deleted, fromInclusive, toExclusive);
-
+    long deleted = scheduleRepository.count();
+    scheduleRepository.deleteAll();
+    
+    log.info("[SCHEDULE_CLEANUP] Wiped out ALL {} exercise schedules for the new week.", deleted);
     return deleted;
   }
 }

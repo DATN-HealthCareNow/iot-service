@@ -23,6 +23,19 @@ public class HealthDataService {
 
     private final DailyHealthRepository repository;
 
+    private DailyHealth.Metrics buildZeroMetrics() {
+        return DailyHealth.Metrics.builder()
+                .steps(0.0)
+                .exerciseMinutes(0)
+                .googleExerciseMinutes(0)
+                .activeCalories(0)
+                .restingCalories(0)
+                .sleepMinutes(0)
+                .heartRate(0)
+                .restingHeartRate(0)
+                .build();
+    }
+
     // 1. UPDATE/UPSERT TỪ MOBILE
     public DailyHealth upsertHealthData(DailyHealth payload) {
         log.info("[SYNC] Received health sync request | userId={}, date={}, source={}", 
@@ -64,6 +77,7 @@ public class HealthDataService {
                         eMetrics.setRestingCalories(pMetrics.getRestingCalories() != null ? pMetrics.getRestingCalories() : eMetrics.getRestingCalories());
                         eMetrics.setSleepMinutes(pMetrics.getSleepMinutes() != null ? pMetrics.getSleepMinutes() : eMetrics.getSleepMinutes());
                         eMetrics.setHeartRate(pMetrics.getHeartRate() != null ? pMetrics.getHeartRate() : eMetrics.getHeartRate());
+                        eMetrics.setRestingHeartRate(pMetrics.getRestingHeartRate() != null ? pMetrics.getRestingHeartRate() : eMetrics.getRestingHeartRate());
                         
                         log.info("[SYNC] Merged metrics: steps={}, googleExerciseMinutes={}, activeCalories={}, heartRate={}", 
                                 eMetrics.getSteps(), 
@@ -115,6 +129,7 @@ public class HealthDataService {
                     .restingCalories(1500)
                     .sleepMinutes(mockSleep)
                     .heartRate(mockHeartRate)
+                    .restingHeartRate(Math.max(45, mockHeartRate - 12))
                     .build();
 
             DailyHealth record = DailyHealth.builder()
@@ -131,7 +146,8 @@ public class HealthDataService {
         return "✅ Đã tạo/update thành công " + (daysToSeed + 1) + " ngày dữ liệu mẫu cho User " + userId;
     }
 
-    // 3. GET DỮ LIỆU NGÀY HIỆN TẠI (KÈM CHỨC NĂNG API LẬU FAKE DATA NẾU CHƯA CÓ)
+        // 3. GET DỮ LIỆU NGÀY HIỆN TẠI
+        // Nếu user chưa connect/sync health source thì trả về metrics = 0.
     public DailyHealth getDailyHealth(String userId, String dateString) {
         if (dateString == null || dateString.isBlank()) {
             dateString = ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
@@ -139,30 +155,24 @@ public class HealthDataService {
         
         final String finalDate = dateString;
         return repository.findByUserIdAndDateString(userId, finalDate)
+            .map(existing -> {
+                if ("Mock_API_HealthKit_Fake".equals(existing.getSource())) {
+                existing.setSource("NO_HEALTH_SOURCE");
+                existing.setMetrics(buildZeroMetrics());
+                return repository.save(existing);
+                }
+                return existing;
+            })
                 .orElseGet(() -> {
-                    // Khởi tạo data giả (API lậu) theo yêu cầu cho tới khi có Native Module (HealthKit thật)
-                    Random random = new Random();
-                    DailyHealth.Metrics metrics = DailyHealth.Metrics.builder()
-                            .steps((double) (2500 + random.nextInt(6000))) // Random 2500 -> 8500 bước
-                            .exerciseMinutes(20 + random.nextInt(40))      // Random 20 -> 60 phút
-                            .activeCalories(150 + random.nextInt(350))     // Random 150 -> 500 kcal
-                            .restingCalories(1400)
-                            .sleepMinutes(360 + random.nextInt(180))       // 6 tiếng -> 9 tiếng
-                            .heartRate(60 + random.nextInt(41))            // 60 -> 100 bpm
-                            .build();
-
-                    DailyHealth fakeData = DailyHealth.builder()
+                return DailyHealth.builder()
                             .userId(userId)
                             .dateString(finalDate)
                             .dateStringLocal(finalDate)
                             .rawDate(ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"))
                                     .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z")))
-                            .source("Mock_API_HealthKit_Fake")
-                            .metrics(metrics)
+                    .source("NO_HEALTH_SOURCE")
+                    .metrics(buildZeroMetrics())
                             .build();
-                    
-                    // Lưu lại DB để lần gọi GET tiếp theo trong ngày sẽ lấy data đã bị Mock chứ không random nhảy số lại liên tục
-                    return repository.save(fakeData);
                 });
     }
 
