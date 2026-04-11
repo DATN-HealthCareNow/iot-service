@@ -33,6 +33,7 @@ public class HealthDataService {
                 .sleepMinutes(0)
                 .heartRate(0)
                 .restingHeartRate(0)
+                .distanceMeters(0.0)
                 .build();
     }
 
@@ -78,6 +79,7 @@ public class HealthDataService {
                         eMetrics.setSleepMinutes(pMetrics.getSleepMinutes() != null ? pMetrics.getSleepMinutes() : eMetrics.getSleepMinutes());
                         eMetrics.setHeartRate(pMetrics.getHeartRate() != null ? pMetrics.getHeartRate() : eMetrics.getHeartRate());
                         eMetrics.setRestingHeartRate(pMetrics.getRestingHeartRate() != null ? pMetrics.getRestingHeartRate() : eMetrics.getRestingHeartRate());
+                        eMetrics.setDistanceMeters(pMetrics.getDistanceMeters() != null ? pMetrics.getDistanceMeters() : eMetrics.getDistanceMeters());
                         
                         log.info("[SYNC] Merged metrics: steps={}, googleExerciseMinutes={}, activeCalories={}, heartRate={}", 
                                 eMetrics.getSteps(), 
@@ -125,11 +127,13 @@ public class HealthDataService {
             DailyHealth.Metrics metrics = DailyHealth.Metrics.builder()
                     .steps(mockSteps)
                     .exerciseMinutes(mockExercise)
+                    .googleExerciseMinutes(mockExercise)
                     .activeCalories(mockCalories)
                     .restingCalories(1500)
                     .sleepMinutes(mockSleep)
                     .heartRate(mockHeartRate)
                     .restingHeartRate(Math.max(45, mockHeartRate - 12))
+                    .distanceMeters(mockSteps * 0.75)
                     .build();
 
             DailyHealth record = DailyHealth.builder()

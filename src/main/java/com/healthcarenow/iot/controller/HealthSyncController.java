@@ -65,15 +65,23 @@ public class HealthSyncController {
         
         // Map metrics
         if (request.getMetrics() != null) {
+            int resolvedGoogleExerciseMinutes =
+                request.getMetrics().getGoogleExerciseMinutes() != null
+                    ? request.getMetrics().getGoogleExerciseMinutes()
+                    : (request.getMetrics().getActiveMinutes() != null
+                        ? request.getMetrics().getActiveMinutes()
+                        : 0);
+
             DailyHealth.Metrics metrics = DailyHealth.Metrics.builder()
                     .steps(request.getMetrics().getSteps() != null ? request.getMetrics().getSteps() : 0.0)
                     .exerciseMinutes(request.getMetrics().getExerciseMinutes() != null ? request.getMetrics().getExerciseMinutes() : 0)
-                    .googleExerciseMinutes(request.getMetrics().getGoogleExerciseMinutes() != null ? request.getMetrics().getGoogleExerciseMinutes() : 0)
+                .googleExerciseMinutes(resolvedGoogleExerciseMinutes)
                     .activeCalories(request.getMetrics().getActiveCalories() != null ? request.getMetrics().getActiveCalories() : 0)
                     .restingCalories(request.getMetrics().getRestingCalories() != null ? request.getMetrics().getRestingCalories() : 1400)
                     .sleepMinutes(request.getMetrics().getSleepMinutes() != null ? request.getMetrics().getSleepMinutes() : 0)
                     .heartRate(request.getMetrics().getHeartRate() != null ? request.getMetrics().getHeartRate() : 0)
                     .restingHeartRate(request.getMetrics().getRestingHeartRate() != null ? request.getMetrics().getRestingHeartRate() : 0)
+                .distanceMeters(request.getMetrics().getDistanceMeters() != null ? request.getMetrics().getDistanceMeters() : 0.0)
                     .build();
             payload.setMetrics(metrics);
         } else {

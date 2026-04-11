@@ -58,5 +58,6 @@ public class DailyHealth {
         @Builder.Default private Integer sleepMinutes = 0;
         @Builder.Default private Integer heartRate = 0;
         @Builder.Default private Integer restingHeartRate = 0;
+        @Builder.Default private Double distanceMeters = 0.0;
     }
 }
