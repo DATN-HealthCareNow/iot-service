@@ -41,6 +41,12 @@ public class HealthSyncRequest {
         @JsonAlias({"googleExerciseMinutes", "google_exercise_minutes"})
         private Integer googleExerciseMinutes;
 
+        @JsonAlias({"activeMinutes", "active_minutes"})
+        private Integer activeMinutes;
+
+        @JsonAlias({"distanceMeters", "distance_meters", "distance"})
+        private Double distanceMeters;
+
         @JsonAlias({"activeCalories", "active_calories"})
         private Integer activeCalories;
 
