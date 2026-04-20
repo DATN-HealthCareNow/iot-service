@@ -29,7 +29,7 @@ public class HealthDataService {
                 .exerciseMinutes(0)
                 .googleExerciseMinutes(0)
                 .activeCalories(0)
-                .restingCalories(0)
+                .totalCalories(0)
                 .sleepMinutes(0)
                 .heartRate(0)
                 .restingHeartRate(0)
@@ -75,7 +75,7 @@ public class HealthDataService {
                         eMetrics.setExerciseMinutes(pMetrics.getExerciseMinutes() != null ? pMetrics.getExerciseMinutes() : eMetrics.getExerciseMinutes());
                         eMetrics.setGoogleExerciseMinutes(pMetrics.getGoogleExerciseMinutes() != null ? pMetrics.getGoogleExerciseMinutes() : eMetrics.getGoogleExerciseMinutes());
                         eMetrics.setActiveCalories(pMetrics.getActiveCalories() != null ? pMetrics.getActiveCalories() : eMetrics.getActiveCalories());
-                        eMetrics.setRestingCalories(pMetrics.getRestingCalories() != null ? pMetrics.getRestingCalories() : eMetrics.getRestingCalories());
+                        eMetrics.setTotalCalories(pMetrics.getTotalCalories() != null ? pMetrics.getTotalCalories() : eMetrics.getTotalCalories());
                         eMetrics.setSleepMinutes(pMetrics.getSleepMinutes() != null ? pMetrics.getSleepMinutes() : eMetrics.getSleepMinutes());
                         eMetrics.setHeartRate(pMetrics.getHeartRate() != null ? pMetrics.getHeartRate() : eMetrics.getHeartRate());
                         eMetrics.setRestingHeartRate(pMetrics.getRestingHeartRate() != null ? pMetrics.getRestingHeartRate() : eMetrics.getRestingHeartRate());
@@ -129,7 +129,7 @@ public class HealthDataService {
                     .exerciseMinutes(mockExercise)
                     .googleExerciseMinutes(mockExercise)
                     .activeCalories(mockCalories)
-                    .restingCalories(1500)
+                    .totalCalories(mockCalories * 2)
                     .sleepMinutes(mockSleep)
                     .heartRate(mockHeartRate)
                     .restingHeartRate(Math.max(45, mockHeartRate - 12))
