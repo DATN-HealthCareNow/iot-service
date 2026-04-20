@@ -50,8 +50,8 @@ public class HealthSyncRequest {
         @JsonAlias({"activeCalories", "active_calories"})
         private Integer activeCalories;
 
-        @JsonAlias({"restingCalories", "resting_calories"})
-        private Integer restingCalories;
+        @JsonAlias({"totalCalories", "total_calories"})
+        private Integer totalCalories;
 
         @JsonAlias({"sleepMinutes", "sleep_minutes"})
         private Integer sleepMinutes;

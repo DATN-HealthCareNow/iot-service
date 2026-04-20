@@ -77,7 +77,7 @@ public class HealthSyncController {
                     .exerciseMinutes(request.getMetrics().getExerciseMinutes() != null ? request.getMetrics().getExerciseMinutes() : 0)
                 .googleExerciseMinutes(resolvedGoogleExerciseMinutes)
                     .activeCalories(request.getMetrics().getActiveCalories() != null ? request.getMetrics().getActiveCalories() : 0)
-                    .restingCalories(request.getMetrics().getRestingCalories() != null ? request.getMetrics().getRestingCalories() : 1400)
+                    .totalCalories(request.getMetrics().getTotalCalories() != null ? request.getMetrics().getTotalCalories() : 0)
                     .sleepMinutes(request.getMetrics().getSleepMinutes() != null ? request.getMetrics().getSleepMinutes() : 0)
                     .heartRate(request.getMetrics().getHeartRate() != null ? request.getMetrics().getHeartRate() : 0)
                     .restingHeartRate(request.getMetrics().getRestingHeartRate() != null ? request.getMetrics().getRestingHeartRate() : 0)

@@ -54,7 +54,7 @@ public class DailyHealth {
         @Builder.Default private Integer exerciseMinutes = 0;
         @Builder.Default private Integer googleExerciseMinutes = 0;
         @Builder.Default private Integer activeCalories = 0;
-        @Builder.Default private Integer restingCalories = 1400;
+        @Builder.Default private Integer totalCalories = 0;
         @Builder.Default private Integer sleepMinutes = 0;
         @Builder.Default private Integer heartRate = 0;
         @Builder.Default private Integer restingHeartRate = 0;
