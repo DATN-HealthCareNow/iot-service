@@ -28,6 +28,8 @@ public class ExerciseSchedule {
 
   private boolean reminderEnabled;
 
+  private String sourceId; // Reference to medical record or scan
+
   private RecurrenceConfig recurrenceConfig;
 
   public enum ScheduleType {

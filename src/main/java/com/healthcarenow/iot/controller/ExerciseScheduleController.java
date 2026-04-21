@@ -45,4 +45,10 @@ public class ExerciseScheduleController {
     scheduleService.deleteSchedule(id);
     return ResponseEntity.noContent().build();
   }
+
+  @DeleteMapping("/batch")
+  public ResponseEntity<Void> deleteSchedules(@RequestBody List<String> ids) {
+    scheduleService.deleteSchedules(ids);
+    return ResponseEntity.noContent().build();
+  }
 }
