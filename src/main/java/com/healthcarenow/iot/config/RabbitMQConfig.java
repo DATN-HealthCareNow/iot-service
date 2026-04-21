@@ -19,6 +19,7 @@ public class RabbitMQConfig {
   public static final String WATER_LOGGING_ROUTING_KEY = "water.logging.routing.key";
   public static final String WATER_LOGGING_DLQ = "water.logging.dlq";
   public static final String WATER_LOGGING_DLQ_ROUTING_KEY = "water.logging.dlq.routing.key";
+  public static final String MEDICATION_CLEANUP_ROUTING_KEY = "medication.cleanup.routing.key";
 
   @Bean
   public TopicExchange healthcareExchange() {

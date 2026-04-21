@@ -21,5 +21,7 @@ public class ScheduleCreateRequest {
 
   private boolean reminderEnabled;
 
+  private String sourceId;
+
   private ExerciseSchedule.RecurrenceConfig recurrenceConfig;
 }
