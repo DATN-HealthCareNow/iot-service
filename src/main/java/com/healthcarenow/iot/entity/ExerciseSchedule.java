@@ -29,6 +29,9 @@ public class ExerciseSchedule {
   private boolean reminderEnabled;
 
   private String sourceId; // Reference to medical record or scan
+  
+  private String diagnosis;
+  private List<Object> medications;
 
   private RecurrenceConfig recurrenceConfig;
 
