@@ -46,7 +46,27 @@ public class ExerciseScheduleReminderScheduler {
 
       boolean shouldRemind = false;
 
-      if (schedule.getScheduleType() == ExerciseSchedule.ScheduleType.RECURRING && schedule.getRecurrenceConfig() != null) {
+      if (schedule.getTitle() != null && (schedule.getTitle().startsWith("Medication") || schedule.getTitle().startsWith("Uống thuốc"))) {
+          // It's a medication schedule, use the medications array
+          if (schedule.getMedications() != null) {
+              for (Object medObj : schedule.getMedications()) {
+                  if (medObj instanceof Map) {
+                      Map<String, Object> medMap = (Map<String, Object>) medObj;
+                      Object schedulesObj = medMap.get("schedules");
+                      if (schedulesObj instanceof List) {
+                          List<Map<String, Object>> medSchedules = (List<Map<String, Object>>) schedulesObj;
+                          for (Map<String, Object> medSched : medSchedules) {
+                              if (currentTime.equals(medSched.get("time"))) {
+                                  shouldRemind = true;
+                                  break;
+                              }
+                          }
+                      }
+                  }
+                  if (shouldRemind) break;
+              }
+          }
+      } else if (schedule.getScheduleType() == ExerciseSchedule.ScheduleType.RECURRING && schedule.getRecurrenceConfig() != null) {
         ExerciseSchedule.RecurrenceConfig config = schedule.getRecurrenceConfig();
         boolean timeMatch = false;
         
@@ -80,7 +100,7 @@ public class ExerciseScheduleReminderScheduler {
           schedule.setReminderEnabled(false);
           scheduleRepository.save(schedule);
           
-          if (schedule.getTitle() != null && schedule.getTitle().startsWith("Uống thuốc")) {
+          if (schedule.getTitle() != null && (schedule.getTitle().startsWith("Medication") || schedule.getTitle().startsWith("Uống thuốc"))) {
               exerciseScheduleService.cleanupForbiddenFoodsBySource(schedule.getUserId(), schedule.getSourceId());
           }
         }
@@ -91,11 +111,11 @@ public class ExerciseScheduleReminderScheduler {
   private void sendNotification(ExerciseSchedule schedule) {
     Map<String, Object> payload = new HashMap<>();
     Map<String, Object> event = new HashMap<>();
-    boolean isMedication = schedule.getTitle() != null && schedule.getTitle().startsWith("Uống thuốc");
+    boolean isMedication = schedule.getTitle() != null && (schedule.getTitle().startsWith("Medication") || schedule.getTitle().startsWith("Uống thuốc"));
     
     if (isMedication) {
         payload.put("title", "Đã đến giờ uống thuốc!");
-        payload.put("body", "Bạn có liều thuốc cần uống: " + schedule.getTitle());
+        payload.put("body", "Bạn có liều thuốc cần uống: " + schedule.getDiagnosis());
         event.put("eventType", "MEDICATION_REMINDER");
     } else {
         payload.put("title", "Đã đến giờ tập luyện!");
