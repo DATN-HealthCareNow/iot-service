@@ -41,5 +41,6 @@ public class ExerciseSchedule {
   public static class RecurrenceConfig {
     private List<Integer> repeatDays; // e.g., Calendar.MONDAY or custom integer representation
     private String reminderTime; // e.g., "08:00", stored as HH:MM string
+    private List<String> reminderTimes; // Support multiple times per day
   }
 }

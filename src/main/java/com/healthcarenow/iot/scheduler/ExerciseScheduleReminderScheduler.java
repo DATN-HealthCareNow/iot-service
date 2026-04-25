@@ -48,7 +48,15 @@ public class ExerciseScheduleReminderScheduler {
 
       if (schedule.getScheduleType() == ExerciseSchedule.ScheduleType.RECURRING && schedule.getRecurrenceConfig() != null) {
         ExerciseSchedule.RecurrenceConfig config = schedule.getRecurrenceConfig();
-        if (config.getReminderTime() != null && config.getReminderTime().equals(currentTime)) {
+        boolean timeMatch = false;
+        
+        if (config.getReminderTimes() != null && config.getReminderTimes().contains(currentTime)) {
+            timeMatch = true;
+        } else if (config.getReminderTime() != null && config.getReminderTime().equals(currentTime)) {
+            timeMatch = true;
+        }
+
+        if (timeMatch) {
           if (matchesRepeatDay(config.getRepeatDays(), now.getDayOfWeek().getValue())) {
             shouldRemind = true;
           }
