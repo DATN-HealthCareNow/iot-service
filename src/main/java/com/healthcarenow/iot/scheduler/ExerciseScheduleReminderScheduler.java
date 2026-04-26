@@ -15,6 +15,8 @@ import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Component
 @RequiredArgsConstructor
@@ -24,6 +26,7 @@ public class ExerciseScheduleReminderScheduler {
   private final ExerciseScheduleRepository scheduleRepository;
   private final RabbitTemplate rabbitTemplate;
   private final com.healthcarenow.iot.service.ExerciseScheduleService exerciseScheduleService;
+  private final Set<String> dispatchedMedicationKeys = ConcurrentHashMap.newKeySet();
 
   // Run every minute
   @Scheduled(
@@ -35,6 +38,9 @@ public class ExerciseScheduleReminderScheduler {
 
     ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"));
     String currentTime = String.format("%02d:%02d", now.getHour(), now.getMinute());
+    String today = now.toLocalDate().toString();
+
+    dispatchedMedicationKeys.removeIf(key -> !key.startsWith(today + ":"));
 
     // Fetch all schedules. In production we might want to query selectively.
     List<ExerciseSchedule> allSchedules = scheduleRepository.findAll();
@@ -44,9 +50,11 @@ public class ExerciseScheduleReminderScheduler {
         continue;
       }
 
-      boolean shouldRemind = false;
+        boolean shouldRemind = false;
+        boolean isMedication = schedule.getTitle() != null &&
+          (schedule.getTitle().startsWith("Medication") || schedule.getTitle().startsWith("Uống thuốc"));
 
-      if (schedule.getTitle() != null && (schedule.getTitle().startsWith("Medication") || schedule.getTitle().startsWith("Uống thuốc"))) {
+        if (isMedication) {
           // It's a medication schedule, use the medications array
           if (schedule.getMedications() != null) {
               for (Object medObj : schedule.getMedications()) {
@@ -93,6 +101,12 @@ public class ExerciseScheduleReminderScheduler {
       }
 
       if (shouldRemind) {
+        if (isMedication) {
+          String dedupeKey = today + ":" + currentTime + ":" + schedule.getUserId();
+          if (!dispatchedMedicationKeys.add(dedupeKey)) {
+            continue;
+          }
+        }
         sendNotification(schedule);
         
         // Disable one-time schedules after reminding
@@ -100,7 +114,7 @@ public class ExerciseScheduleReminderScheduler {
           schedule.setReminderEnabled(false);
           scheduleRepository.save(schedule);
           
-          if (schedule.getTitle() != null && (schedule.getTitle().startsWith("Medication") || schedule.getTitle().startsWith("Uống thuốc"))) {
+          if (isMedication) {
               exerciseScheduleService.cleanupForbiddenFoodsBySource(schedule.getUserId(), schedule.getSourceId());
           }
         }
@@ -111,12 +125,17 @@ public class ExerciseScheduleReminderScheduler {
   private void sendNotification(ExerciseSchedule schedule) {
     Map<String, Object> payload = new HashMap<>();
     Map<String, Object> event = new HashMap<>();
-    boolean isMedication = schedule.getTitle() != null && (schedule.getTitle().startsWith("Medication") || schedule.getTitle().startsWith("Uống thuốc"));
+    boolean isMedication = schedule.getTitle() != null &&
+      (schedule.getTitle().startsWith("Medication") || schedule.getTitle().startsWith("Uống thuốc"));
     
     if (isMedication) {
-        payload.put("title", "Đã đến giờ uống thuốc!");
-        payload.put("body", "Bạn có liều thuốc cần uống: " + schedule.getDiagnosis());
-        event.put("eventType", "MEDICATION_REMINDER");
+      String diagnosis = schedule.getDiagnosis();
+      if (diagnosis == null || diagnosis.isBlank()) {
+        diagnosis = "đơn thuốc của bạn";
+      }
+      payload.put("title", "Nhắc nhẹ: đến giờ uống thuốc");
+      payload.put("body", "Nhắc nhỏ: đã đến giờ uống thuốc cho chẩn đoán " + diagnosis + ". Chúc bạn mau khỏe!");
+      event.put("eventType", "MEDICATION_REMINDER");
     } else {
         payload.put("title", "Đã đến giờ tập luyện!");
         payload.put("body", "Bạn có lịch tập: " + schedule.getTitle() + ". Hãy chuẩn bị và bắt đầu ngay nhé.");

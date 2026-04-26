@@ -72,21 +72,33 @@ public class HealthSyncController {
                         ? request.getMetrics().getActiveMinutes()
                         : 0);
 
+            // Wearable fields: giữ null nếu không có dữ liệu (không fallback về 0)
+            Integer sleepMinutes = request.getMetrics().getSleepMinutes();
+            Integer heartRate = request.getMetrics().getHeartRate();
+            Integer restingHeartRate = request.getMetrics().getRestingHeartRate();
+
+            if (sleepMinutes == null) log.debug("[ENDPOINT] sleepMinutes=null (no wearable sleep data)");
+            if (heartRate == null) log.debug("[ENDPOINT] heartRate=null (no wearable HR data)");
+            if (restingHeartRate == null) log.debug("[ENDPOINT] restingHeartRate=null (no wearable resting HR data)");
+
             DailyHealth.Metrics metrics = DailyHealth.Metrics.builder()
+                    // Activity fields: fallback 0 là hợp lệ
                     .steps(request.getMetrics().getSteps() != null ? request.getMetrics().getSteps() : 0.0)
                     .exerciseMinutes(request.getMetrics().getExerciseMinutes() != null ? request.getMetrics().getExerciseMinutes() : 0)
-                .googleExerciseMinutes(resolvedGoogleExerciseMinutes)
+                    .googleExerciseMinutes(resolvedGoogleExerciseMinutes)
                     .activeCalories(request.getMetrics().getActiveCalories() != null ? request.getMetrics().getActiveCalories() : 0)
                     .totalCalories(request.getMetrics().getTotalCalories() != null ? request.getMetrics().getTotalCalories() : 0)
-                    .sleepMinutes(request.getMetrics().getSleepMinutes() != null ? request.getMetrics().getSleepMinutes() : 0)
-                    .heartRate(request.getMetrics().getHeartRate() != null ? request.getMetrics().getHeartRate() : 0)
-                    .restingHeartRate(request.getMetrics().getRestingHeartRate() != null ? request.getMetrics().getRestingHeartRate() : 0)
-                .distanceMeters(request.getMetrics().getDistanceMeters() != null ? request.getMetrics().getDistanceMeters() : 0.0)
+                    .distanceMeters(request.getMetrics().getDistanceMeters() != null ? request.getMetrics().getDistanceMeters() : 0.0)
+                    // Wearable fields: giữ nguyên null (không fallback)
+                    .sleepMinutes(sleepMinutes)
+                    .heartRate(heartRate)
+                    .restingHeartRate(restingHeartRate)
                     .build();
             payload.setMetrics(metrics);
         } else {
+            // Không có metrics: chỉ set các activity fields với giá trị mặc định, wearable fields = null
             payload.setMetrics(DailyHealth.Metrics.builder().build());
-            log.warn("[ENDPOINT] metrics is missing, using default metrics values");
+            log.warn("[ENDPOINT] metrics is missing, using default values (wearable fields will be null)");
         }
         
         try {
