@@ -74,14 +74,14 @@ public class ActivityService {
     activity.setEndAt(Instant.now());
     activity.setStatus(Activity.Status.FINISHED);
 
-    long durationSecs = Duration.between(activity.getStartAt(), activity.getEndAt()).getSeconds();
+    long durationSecs = request.getExerciseMinutes() != null ? request.getExerciseMinutes() * 60L : Duration.between(activity.getStartAt(), activity.getEndAt()).getSeconds();
     double avgHr = activity.getHeartRateSamples().stream()
         .mapToDouble(Activity.HeartRateSample::getBpm)
         .average()
         .orElse(0.0);
 
     // Core business logic: Calorie formula
-    double calories = calculateCalories(activity, durationSecs, request);
+    double calories = request.getActiveCalories() != null ? request.getActiveCalories() : calculateCalories(activity, durationSecs, request);
 
     Activity.SummaryMetrics summary = Activity.SummaryMetrics.builder()
         .totalDuration(durationSecs)
