@@ -115,29 +115,34 @@ public class ActivityService {
     // Increment metrics in DailyHealth
     String dateStr = ZonedDateTime.ofInstant(savedActivity.getStartAt(), ZoneId.of("Asia/Ho_Chi_Minh"))
         .format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
-        
+
     dailyHealthRepository.findByUserIdAndDateString(savedActivity.getUserId(), dateStr)
         .ifPresentOrElse(dh -> {
-            DailyHealth.Metrics mx = dh.getMetrics();
-            if (mx == null) {
-                mx = new DailyHealth.Metrics();
-                dh.setMetrics(mx);
-            }
-            int addedMins = (int) (durationSecs / 60);
-            mx.setExerciseMinutes((mx.getExerciseMinutes() != null ? mx.getExerciseMinutes() : 0) + addedMins);
-            mx.setActiveCalories((mx.getActiveCalories() != null ? mx.getActiveCalories() : 0) + (int) calories);
-            dailyHealthRepository.save(dh);
+          DailyHealth.Metrics mx = dh.getMetrics();
+          if (mx == null) {
+            mx = new DailyHealth.Metrics();
+            dh.setMetrics(mx);
+          }
+          int addedMins = (int) (durationSecs / 60);
+          mx.setExerciseMinutes((mx.getExerciseMinutes() != null ? mx.getExerciseMinutes() : 0) + addedMins);
+          mx.setActiveCalories((mx.getActiveCalories() != null ? mx.getActiveCalories() : 0) + (int) calories);
+          if (request.getDistanceMeter() != null) {
+            mx.setDistanceMeters(
+                (mx.getDistanceMeters() != null ? mx.getDistanceMeters() : 0.0) + request.getDistanceMeter());
+          }
+          dailyHealthRepository.save(dh);
         }, () -> {
-            DailyHealth dh = DailyHealth.builder()
-                .userId(savedActivity.getUserId())
-                .dateString(dateStr)
-                .source("DanhK_Activity")
-                .metrics(DailyHealth.Metrics.builder()
-                    .exerciseMinutes((int) (durationSecs / 60))
-                    .activeCalories((int) calories)
-                    .build())
-                .build();
-            dailyHealthRepository.save(dh);
+          DailyHealth dh = DailyHealth.builder()
+              .userId(savedActivity.getUserId())
+              .dateString(dateStr)
+              .source("Activity")
+              .metrics(DailyHealth.Metrics.builder()
+                  .exerciseMinutes((int) (durationSecs / 60))
+                  .activeCalories((int) calories)
+                  .distanceMeters(request.getDistanceMeter() != null ? request.getDistanceMeter().doubleValue() : 0.0)
+                  .build())
+              .build();
+          dailyHealthRepository.save(dh);
         });
 
     // Publish Event async
@@ -148,6 +153,9 @@ public class ActivityService {
         .totalDurationStr(durationSecs)
         .build();
     eventPublisher.publishActivityCompleted(event);
+
+    // Không ghi log lịch sử tập luyện nữa, xóa record Activity
+    activityRepository.deleteById(savedActivity.getId());
 
     return savedActivity;
   }
