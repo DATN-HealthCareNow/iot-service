@@ -55,8 +55,10 @@ public class DailyHealth {
         @Builder.Default private Integer exerciseMinutes = 0;
         @Builder.Default private Integer googleExerciseMinutes = 0;
         @Builder.Default private Integer activeCalories = 0;
+        @Builder.Default private Integer googleActiveCalories = 0;
         @Builder.Default private Integer totalCalories = 0;
         @Builder.Default private Double distanceMeters = 0.0;
+        @Builder.Default private Double googleDistanceMeters = 0.0;
 
         // Wearable fields: null = không có thiết bị / không ghi nhận được
         // KHÔNG dùng @Builder.Default để tránh ghi đè null → 0

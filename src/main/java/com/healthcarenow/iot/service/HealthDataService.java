@@ -39,55 +39,70 @@ public class HealthDataService {
 
     // 1. UPDATE/UPSERT TỪ MOBILE
     public DailyHealth upsertHealthData(DailyHealth payload) {
-        log.info("[SYNC] Received health sync request | userId={}, date={}, source={}", 
+        log.info("[SYNC] Received health sync request | userId={}, date={}, source={}",
                 payload.getUserId(), payload.getDateString(), payload.getSource());
         log.debug("[SYNC] Payload metrics: {}", payload.getMetrics());
-        
+
         if (payload.getMetrics() == null) {
             log.warn("[SYNC] ⚠️ Metrics is NULL! This will cause empty data in DB");
         } else {
-            log.info("[SYNC] Metrics details: steps={}, activeCalories={}, exerciseMinutes={}, sleepMinutes={}", 
+            log.info("[SYNC] Metrics details: steps={}, activeCalories={}, exerciseMinutes={}, sleepMinutes={}",
                     payload.getMetrics().getSteps(),
                     payload.getMetrics().getActiveCalories(),
                     payload.getMetrics().getExerciseMinutes(),
                     payload.getMetrics().getSleepMinutes());
         }
-        
+
         return repository.findByUserIdAndDateString(payload.getUserId(), payload.getDateString())
                 .map(existing -> {
                     log.info("[SYNC] Found existing record, merging data");
                     // Update đè dữ liệu
                     existing.setRawDate(payload.getRawDate());
-                    existing.setDateStringLocal(payload.getDateStringLocal() != null ? payload.getDateStringLocal() : existing.getDateStringLocal());
+                    existing.setDateStringLocal(payload.getDateStringLocal() != null ? payload.getDateStringLocal()
+                            : existing.getDateStringLocal());
                     existing.setSource(payload.getSource() != null ? payload.getSource() : "DanhK");
-                    
+
                     if (payload.getMetrics() != null) {
                         DailyHealth.Metrics eMetrics = existing.getMetrics();
                         DailyHealth.Metrics pMetrics = payload.getMetrics();
-                        
+
                         if (eMetrics == null) {
                             eMetrics = new DailyHealth.Metrics();
                             existing.setMetrics(eMetrics);
                             log.info("[SYNC] Created new metrics object");
                         }
-                        
+
                         eMetrics.setSteps(pMetrics.getSteps() != null ? pMetrics.getSteps() : eMetrics.getSteps());
-                        eMetrics.setExerciseMinutes(pMetrics.getExerciseMinutes() != null ? pMetrics.getExerciseMinutes() : eMetrics.getExerciseMinutes());
-                        eMetrics.setGoogleExerciseMinutes(pMetrics.getGoogleExerciseMinutes() != null ? pMetrics.getGoogleExerciseMinutes() : eMetrics.getGoogleExerciseMinutes());
-                        eMetrics.setActiveCalories(pMetrics.getActiveCalories() != null ? pMetrics.getActiveCalories() : eMetrics.getActiveCalories());
-                        eMetrics.setTotalCalories(pMetrics.getTotalCalories() != null ? pMetrics.getTotalCalories() : eMetrics.getTotalCalories());
-                        eMetrics.setSleepMinutes(pMetrics.getSleepMinutes() != null ? pMetrics.getSleepMinutes() : eMetrics.getSleepMinutes());
-                        eMetrics.setHeartRate(pMetrics.getHeartRate() != null ? pMetrics.getHeartRate() : eMetrics.getHeartRate());
-                        eMetrics.setRestingHeartRate(pMetrics.getRestingHeartRate() != null ? pMetrics.getRestingHeartRate() : eMetrics.getRestingHeartRate());
-                        eMetrics.setDistanceMeters(pMetrics.getDistanceMeters() != null ? pMetrics.getDistanceMeters() : eMetrics.getDistanceMeters());
+                        // TUYỆT ĐỐI KHÔNG GHI ĐÈ: exerciseMinutes, activeCalories, distanceMeters (Dành riêng cho App)
                         
-                        log.info("[SYNC] Merged metrics: steps={}, googleExerciseMinutes={}, activeCalories={}, heartRate={}", 
-                                eMetrics.getSteps(), 
+                        eMetrics.setGoogleExerciseMinutes(
+                                pMetrics.getGoogleExerciseMinutes() != null ? pMetrics.getGoogleExerciseMinutes()
+                                        : eMetrics.getGoogleExerciseMinutes());
+                        
+                        // Map Google Fit's calories/distance into the new google fields
+                        eMetrics.setGoogleActiveCalories(pMetrics.getActiveCalories() != null ? pMetrics.getActiveCalories()
+                                : eMetrics.getGoogleActiveCalories());
+                        eMetrics.setGoogleDistanceMeters(pMetrics.getDistanceMeters() != null ? pMetrics.getDistanceMeters()
+                                : eMetrics.getGoogleDistanceMeters());
+
+                        eMetrics.setTotalCalories(pMetrics.getTotalCalories() != null ? pMetrics.getTotalCalories()
+                                : eMetrics.getTotalCalories());
+                        eMetrics.setSleepMinutes(pMetrics.getSleepMinutes() != null ? pMetrics.getSleepMinutes()
+                                : eMetrics.getSleepMinutes());
+                        eMetrics.setHeartRate(
+                                pMetrics.getHeartRate() != null ? pMetrics.getHeartRate() : eMetrics.getHeartRate());
+                        eMetrics.setRestingHeartRate(
+                                pMetrics.getRestingHeartRate() != null ? pMetrics.getRestingHeartRate()
+                                        : eMetrics.getRestingHeartRate());
+
+                        log.info(
+                                "[SYNC] Merged metrics: steps={}, googleExerciseMinutes={}, googleActiveCalories={}, heartRate={}",
+                                eMetrics.getSteps(),
                                 eMetrics.getGoogleExerciseMinutes(),
-                                eMetrics.getActiveCalories(),
+                                eMetrics.getGoogleActiveCalories(),
                                 eMetrics.getHeartRate());
                     }
-                    
+
                     DailyHealth saved = repository.save(existing);
                     log.info("[SYNC] ✅ Successfully merged and saved");
                     return saved;
@@ -97,7 +112,21 @@ public class HealthDataService {
                     if (payload.getMetrics() == null) {
                         log.warn("[SYNC] ⚠️ Creating record with NULL metrics!");
                         payload.setMetrics(new DailyHealth.Metrics());
+                    } else if ("GOOGLE_FIT".equals(payload.getSource()) || "DanhK".equals(payload.getSource())) {
+                        DailyHealth.Metrics pMetrics = payload.getMetrics();
+                        // Chuyển dữ liệu sang cột google để bảo toàn cột của App
+                        pMetrics.setGoogleActiveCalories(pMetrics.getActiveCalories());
+                        pMetrics.setGoogleDistanceMeters(pMetrics.getDistanceMeters());
+                        // Cột googleExerciseMinutes thường đã được parse từ controller, nhưng cứ gán thêm cho chắc
+                        if (pMetrics.getGoogleExerciseMinutes() == null || pMetrics.getGoogleExerciseMinutes() == 0) {
+                            pMetrics.setGoogleExerciseMinutes(pMetrics.getExerciseMinutes());
+                        }
+                        // Zero out các cột của App
+                        pMetrics.setActiveCalories(0);
+                        pMetrics.setDistanceMeters(0.0);
+                        pMetrics.setExerciseMinutes(0);
                     }
+                    
                     if (payload.getDateStringLocal() == null || payload.getDateStringLocal().isBlank()) {
                         payload.setDateStringLocal(payload.getDateString());
                     }
@@ -115,14 +144,15 @@ public class HealthDataService {
         ZoneId zoneId = ZoneId.of("Asia/Ho_Chi_Minh");
 
         for (int i = daysToSeed; i >= 0; i--) {
-            ZonedDateTime targetDate = ZonedDateTime.now(zoneId).minusDays(i).withHour(0).withMinute(0).withSecond(0).withNano(0);
-            
-            double mockSteps = 5000 + random.nextInt(3501); 
-            int mockExercise = 20 + random.nextInt(41);     
-            int mockCalories = (int) (mockExercise * 7.5);  
-            int mockSleep = 300 + random.nextInt(181);      
-            int mockWater = 500 + random.nextInt(2001);     
-            int mockHeartRate = 60 + random.nextInt(41);    
+            ZonedDateTime targetDate = ZonedDateTime.now(zoneId).minusDays(i).withHour(0).withMinute(0).withSecond(0)
+                    .withNano(0);
+
+            double mockSteps = 5000 + random.nextInt(3501);
+            int mockExercise = 20 + random.nextInt(41);
+            int mockCalories = (int) (mockExercise * 7.5);
+            int mockSleep = 300 + random.nextInt(181);
+            int mockWater = 500 + random.nextInt(2001);
+            int mockHeartRate = 60 + random.nextInt(41);
 
             DailyHealth.Metrics metrics = DailyHealth.Metrics.builder()
                     .steps(mockSteps)
@@ -150,32 +180,33 @@ public class HealthDataService {
         return "✅ Đã tạo/update thành công " + (daysToSeed + 1) + " ngày dữ liệu mẫu cho User " + userId;
     }
 
-        // 3. GET DỮ LIỆU NGÀY HIỆN TẠI
-        // Nếu user chưa connect/sync health source thì trả về metrics = 0.
+    // 3. GET DỮ LIỆU NGÀY HIỆN TẠI
+    // Nếu user chưa connect/sync health source thì trả về metrics = 0.
     public DailyHealth getDailyHealth(String userId, String dateString) {
         if (dateString == null || dateString.isBlank()) {
-            dateString = ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh")).format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+            dateString = ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"))
+                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd"));
         }
-        
+
         final String finalDate = dateString;
         return repository.findByUserIdAndDateString(userId, finalDate)
-            .map(existing -> {
-                if ("Mock_API_HealthKit_Fake".equals(existing.getSource())) {
-                existing.setSource("NO_HEALTH_SOURCE");
-                existing.setMetrics(buildZeroMetrics());
-                return repository.save(existing);
-                }
-                return existing;
-            })
+                .map(existing -> {
+                    if ("Mock_API_HealthKit_Fake".equals(existing.getSource())) {
+                        existing.setSource("NO_HEALTH_SOURCE");
+                        existing.setMetrics(buildZeroMetrics());
+                        return repository.save(existing);
+                    }
+                    return existing;
+                })
                 .orElseGet(() -> {
-                return DailyHealth.builder()
+                    return DailyHealth.builder()
                             .userId(userId)
                             .dateString(finalDate)
                             .dateStringLocal(finalDate)
                             .rawDate(ZonedDateTime.now(ZoneId.of("Asia/Ho_Chi_Minh"))
                                     .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss Z")))
-                    .source("NO_HEALTH_SOURCE")
-                    .metrics(buildZeroMetrics())
+                            .source("NO_HEALTH_SOURCE")
+                            .metrics(buildZeroMetrics())
                             .build();
                 });
     }
@@ -195,10 +226,10 @@ public class HealthDataService {
             return repository.findByUserIdAndDateStringGreaterThanEqualAndDateStringLessThanEqualOrderByDateStringAsc(
                     userId,
                     normalizedStart,
-                    normalizedEnd
-            );
+                    normalizedEnd);
         } catch (Exception ex) {
-            log.error("[REPORT] Failed to fetch report | userId={}, startDate={}, endDate={}, normalizedStart={}, normalizedEnd={}",
+            log.error(
+                    "[REPORT] Failed to fetch report | userId={}, startDate={}, endDate={}, normalizedStart={}, normalizedEnd={}",
                     userId, startDate, endDate, normalizedStart, normalizedEnd, ex);
             return List.of();
         }
@@ -232,7 +263,8 @@ public class HealthDataService {
                     .toLocalDate()
                     .format(DateTimeFormatter.ISO_LOCAL_DATE);
         } catch (DateTimeParseException ex) {
-            throw new IllegalArgumentException("Invalid date format. Expected yyyy-MM-dd or ISO timestamp: " + rawDate, ex);
+            throw new IllegalArgumentException("Invalid date format. Expected yyyy-MM-dd or ISO timestamp: " + rawDate,
+                    ex);
         }
     }
 }
