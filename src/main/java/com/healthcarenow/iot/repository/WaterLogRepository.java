@@ -9,4 +9,7 @@ import java.util.List;
 @Repository
 public interface WaterLogRepository extends MongoRepository<WaterLog, String> {
     List<WaterLog> findByUserIdAndDateString(String userId, String dateString);
+    List<WaterLog> findByUserIdOrderByCreatedAtDesc(String userId);
+    List<WaterLog> findByUserIdAndCreatedAtAfter(String userId, java.time.LocalDateTime createdAt);
+    void deleteByCreatedAtBefore(java.time.LocalDateTime createdAt);
 }
