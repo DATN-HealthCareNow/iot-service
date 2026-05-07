@@ -90,4 +90,8 @@ public class WaterService {
 
         return waterLogRepository.findByUserIdAndDateString(userId, today);
     }
+
+    public List<WaterLog> getAllLogs(String userId) {
+        return waterLogRepository.findByUserIdOrderByCreatedAtDesc(userId);
+    }
 }

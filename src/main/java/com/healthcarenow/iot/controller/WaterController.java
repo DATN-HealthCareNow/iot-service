@@ -29,4 +29,10 @@ public class WaterController {
             @RequestHeader("x-user-id") String userId) {
         return ResponseEntity.ok(waterService.getTodaysLogs(userId));
     }
+
+    @GetMapping("/logs")
+    public ResponseEntity<List<WaterLog>> getAllLogs(
+            @RequestHeader("x-user-id") String userId) {
+        return ResponseEntity.ok(waterService.getAllLogs(userId));
+    }
 }
