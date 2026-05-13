@@ -133,13 +133,16 @@ public class ExerciseScheduleReminderScheduler {
       if (diagnosis == null || diagnosis.isBlank()) {
         diagnosis = "đơn thuốc của bạn";
       }
+      payload.put("language", "vi");
+      payload.put("diagnosis", schedule.getDiagnosis());
       payload.put("title", "Nhắc nhẹ: đến giờ uống thuốc");
       payload.put("body", "Nhắc nhỏ: đã đến giờ uống thuốc cho chẩn đoán " + diagnosis + ". Chúc bạn mau khỏe!");
-      event.put("eventType", "MEDICATION_REMINDER");
+      event.put("eventType", "MEDICATION_TIME");
     } else {
-        payload.put("title", "Đã đến giờ tập luyện!");
-        payload.put("body", "Bạn có lịch tập: " + schedule.getTitle() + ". Hãy chuẩn bị và bắt đầu ngay nhé.");
-        event.put("eventType", "ACTIVITY_REMINDER");
+        payload.put("schedule_title", schedule.getTitle());
+        payload.put("title", "⏰ Đã đến giờ tập luyện!");
+        payload.put("body", "Lịch tập: " + schedule.getTitle() + ". Hãy bắt đầu ngay để duy trì phong độ và sức khỏe nhé! 💪");
+        event.put("eventType", "EXERCISE_SCHEDULE_REMINDER");
     }
     
     payload.put("language", "vi");
